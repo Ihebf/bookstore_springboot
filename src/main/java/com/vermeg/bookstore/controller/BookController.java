@@ -71,10 +71,10 @@ public class BookController {
     @DeleteMapping("/delete/{bookId}")
     public ResponseEntity<Book> deleteBook(@PathVariable Integer bookId){
         try {
-            bookService.deleteBook(bookId);
+            Book book = bookService.deleteBook(bookId);
             return new ResponseEntity(
-                    "Book deleted",
-                    HttpStatus.NO_CONTENT);
+                    "Book deleted "+ book,
+                    HttpStatus.OK);
         }catch (BookNotFoundException e){
             return new ResponseEntity(
                     "Book not found",

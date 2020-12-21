@@ -84,7 +84,7 @@ public class OrderController {
             orderService.deleteOrder(orderId);
             return new ResponseEntity(
                     "Order deleted",
-                    HttpStatus.NO_CONTENT);
+                    HttpStatus.OK);
         }catch (OrderNotFoundException e){
             return new ResponseEntity(
                     "Order not found",

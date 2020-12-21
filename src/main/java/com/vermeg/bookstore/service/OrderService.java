@@ -44,9 +44,10 @@ public class OrderService {
         return orderRepository.save(_order);
     }
 
-    public void deleteOrder(Integer orderId) throws OrderNotFoundException {
+    public Order deleteOrder(Integer orderId) throws OrderNotFoundException {
         Order order = this.getOrderById(orderId);
         orderRepository.delete(order);
+        return order;
     }
 
 

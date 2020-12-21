@@ -45,8 +45,9 @@ public class BookService {
         return bookRepository.save(_book);
     }
 
-    public void deleteBook(Integer bookId) throws BookNotFoundException {
-        Book _book = this.getBookById(bookId);
-        bookRepository.delete(_book);
+    public Book deleteBook(Integer bookId) throws BookNotFoundException {
+        Book book = this.getBookById(bookId);
+        bookRepository.delete(book);
+        return book;
     }
 }

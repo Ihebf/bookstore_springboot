@@ -38,8 +38,8 @@ public class OrderItemService {
         return orderItemRepository.save(orderItem);
     }
 
-    public OrderItem updateOrderItem(OrderItemKey orderItemId, OrderItem orderItem) throws OrderItemNotFoundException {
-        OrderItem _orderItem = this.getOrderItemById(orderItemId.getOrderId(),orderItemId.getBookId());
+    public OrderItem updateOrderItem(Integer orderId, Integer bookId, OrderItem orderItem) throws OrderItemNotFoundException {
+        OrderItem _orderItem = this.getOrderItemById(orderId,bookId);
 
         _orderItem.setBook(orderItem.getBook());
         _orderItem.setOrder(orderItem.getOrder());
@@ -49,9 +49,11 @@ public class OrderItemService {
         return orderItemRepository.save(_orderItem);
     }
 
-    public void deleteOrderItem(OrderItemKey orderItemId) throws OrderItemNotFoundException {
-        OrderItem _orderItem = this.getOrderItemById(orderItemId.getOrderId(),orderItemId.getBookId());
+    public OrderItem deleteOrderItem(Integer orderId, Integer bookId) throws OrderItemNotFoundException {
+        OrderItem orderItem = this.getOrderItemById(orderId,bookId);
 
-        orderItemRepository.delete(_orderItem);
+        orderItemRepository.delete(orderItem);
+        return orderItem;
     }
+
 }

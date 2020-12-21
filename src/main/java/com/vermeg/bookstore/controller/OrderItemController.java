@@ -1,7 +1,6 @@
 package com.vermeg.bookstore.controller;
 
 import com.vermeg.bookstore.entities.OrderItem;
-import com.vermeg.bookstore.entities.OrderItemKey;
 import com.vermeg.bookstore.exception.OrderItemListEmptyException;
 import com.vermeg.bookstore.exception.OrderItemNotFoundException;
 import com.vermeg.bookstore.service.OrderItemService;
@@ -13,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/orderItemItems")
+@RequestMapping("/orderItems")
 @AllArgsConstructor
 public class OrderItemController {
 
@@ -30,14 +29,14 @@ public class OrderItemController {
         }
     }
 
-    @GetMapping("/{orderItemId}/{bookId}")
-    public ResponseEntity<OrderItem> getOrderItemById(@PathVariable Integer orderItemId, @PathVariable Integer bookId){
+    @GetMapping("/{orderId}/{bookId}")
+    public ResponseEntity<OrderItem> getOrderItemById(@PathVariable Integer orderId, @PathVariable Integer bookId){
         try{
             return ResponseEntity
                     .status(HttpStatus.OK)
-                    .body(orderItemService.getOrderItemById(orderItemId,bookId));
+                    .body(orderItemService.getOrderItemById(orderId,bookId));
         } catch (OrderItemNotFoundException e){
-            return new ResponseEntity("There is no orderItem with this id "+orderItemId, HttpStatus.NO_CONTENT);
+            return new ResponseEntity("There is no orderItem with this id "+orderId, HttpStatus.NO_CONTENT);
         }
     }
 
@@ -53,12 +52,25 @@ public class OrderItemController {
         }
     }
 
-    @PutMapping("/update/{orderItemId}")
-    public ResponseEntity<OrderItem> updateOrderItem(@PathVariable OrderItemKey orderItemId, @RequestBody OrderItem orderItem){
+    @PutMapping("/update/{orderId}/{bookId}")
+    public ResponseEntity<OrderItem> updateOrderItem(@PathVariable Integer orderId,@PathVariable Integer bookId, @RequestBody OrderItem orderItem){
         try {
             return ResponseEntity
                     .status(HttpStatus.OK)
-                    .body(orderItemService.updateOrderItem(orderItemId,orderItem));
+                    .body(orderItemService.updateOrderItem(orderId,bookId,orderItem));
+        } catch (OrderItemNotFoundException e) {
+            return new ResponseEntity(
+                    "OrderItem not found",
+                    HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @DeleteMapping("/delete/{orderId}/{bookId}")
+    public ResponseEntity<OrderItem> deleteOrderItem(@PathVariable Integer orderId, @PathVariable Integer bookId){
+        try {
+            return ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(orderItemService.deleteOrderItem(orderId,bookId));
         } catch (OrderItemNotFoundException e) {
             return new ResponseEntity(
                     "OrderItem not found",
