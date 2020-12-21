@@ -37,7 +37,6 @@ public class OrderService {
     public Order updateOrder(Integer orderId, Order order) throws OrderNotFoundException {
         Order _order = this.getOrderById(orderId);
 
-        _order.setPrice(order.getPrice());
         _order.setOrderItemSet(order.getOrderItemSet());
         _order.setState(order.isState());
         _order.setUser(order.getUser());
