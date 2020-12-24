@@ -1,8 +1,10 @@
 package com.vermeg.bookstore.controller;
 
 import com.vermeg.bookstore.entities.OrderItem;
+import com.vermeg.bookstore.exception.BookNotFoundException;
 import com.vermeg.bookstore.exception.OrderItemListEmptyException;
 import com.vermeg.bookstore.exception.OrderItemNotFoundException;
+import com.vermeg.bookstore.exception.UserNotFoundException;
 import com.vermeg.bookstore.service.OrderItemService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -40,20 +42,26 @@ public class OrderItemController {
         }
     }
 
-    @PostMapping("/add")
-    public ResponseEntity<OrderItem> createOrderItem(@RequestBody OrderItem orderItem){
-        try{
+    @PostMapping("/add/order/{orderId}/book/{bookId}/user/{userId}")
+    public ResponseEntity<OrderItem> createOrderItem(@PathVariable Integer orderId,
+                                                     @PathVariable Integer bookId,
+                                                     @PathVariable Integer userId){
+        try {
             return ResponseEntity
                     .status(HttpStatus.CREATED)
-                    .body(orderItemService.createOrderItem(orderItem));
-        }catch (Exception e){
-            return new ResponseEntity("The server has encountered a situation that it cannot handle.",
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+                    .body(orderItemService.createOrderItem(orderId,bookId,userId));
+        } catch (UserNotFoundException e) {
+            return new ResponseEntity("User not found with the id: "+userId,HttpStatus.NO_CONTENT);
+        } catch (BookNotFoundException e) {
+            return new ResponseEntity("Book not found with the id: "+bookId,HttpStatus.NO_CONTENT);
         }
     }
 
-    @PutMapping("/update/{orderId}/{bookId}")
-    public ResponseEntity<OrderItem> updateOrderItem(@PathVariable Integer orderId,@PathVariable Integer bookId, @RequestBody OrderItem orderItem){
+    @PutMapping("/update/order/{orderId}/book/{bookId}/user/{userId}")
+    public ResponseEntity<OrderItem> updateOrderItem(
+            @PathVariable Integer orderId,
+            @PathVariable Integer bookId,
+            @RequestBody OrderItem orderItem){
         try {
             return ResponseEntity
                     .status(HttpStatus.OK)
@@ -66,7 +74,9 @@ public class OrderItemController {
     }
 
     @DeleteMapping("/delete/{orderId}/{bookId}")
-    public ResponseEntity<OrderItem> deleteOrderItem(@PathVariable Integer orderId, @PathVariable Integer bookId){
+    public ResponseEntity<OrderItem> deleteOrderItem(
+            @PathVariable Integer orderId,
+            @PathVariable Integer bookId){
         try {
             return ResponseEntity
                     .status(HttpStatus.OK)

@@ -1,21 +1,27 @@
 package com.vermeg.bookstore.service;
 
-import com.vermeg.bookstore.entities.OrderItem;
-import com.vermeg.bookstore.entities.OrderItemKey;
-import com.vermeg.bookstore.exception.OrderItemListEmptyException;
-import com.vermeg.bookstore.exception.OrderItemNotFoundException;
+import com.vermeg.bookstore.entities.*;
+import com.vermeg.bookstore.exception.*;
+import com.vermeg.bookstore.repository.BookRepository;
 import com.vermeg.bookstore.repository.OrderItemRepository;
+import com.vermeg.bookstore.repository.OrderRepository;
+import com.vermeg.bookstore.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @AllArgsConstructor
 public class OrderItemService {
 
     private final OrderItemRepository orderItemRepository;
-
+    private final OrderRepository orderRepository;
+    private final UserRepository userRepository;
+    private final BookRepository bookRepository;
 
     public List<OrderItem> getAllOrderItem() throws OrderItemListEmptyException {
         List<OrderItem> orderItems = orderItemRepository.findAll();
@@ -32,13 +38,52 @@ public class OrderItemService {
         return orderItem;
     }
 
-    public OrderItem createOrderItem(OrderItem orderItem) {
-        OrderItemKey id = new OrderItemKey(orderItem.getId().getOrderId(),orderItem.getId().getBookId());
+    @Transactional
+    public OrderItem createOrderItem(Integer orderId,Integer bookId,Integer userId)
+            throws UserNotFoundException, BookNotFoundException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(()-> new UserNotFoundException("User not found"));
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(()-> new BookNotFoundException("Book not found"));
+        Optional<Order> order = orderRepository.findById(orderId);
+        if(order.isPresent()){
+            Order newOrder = new Order();
+            OrderItem orderItem = new OrderItem(null,1,book.getPrice(),book,newOrder);
+            List<OrderItem> orderItemList = new ArrayList<>();
 
-        return orderItemRepository.save(orderItem);
+            orderItemList.add(orderItem);
+
+            newOrder.setUser(user);
+            newOrder.setOrderItem(orderItemList);
+            newOrder.setTotalPrice(orderItem.getPrice());
+
+            orderRepository.save(newOrder);
+            orderItemRepository.save(orderItem);
+            return orderItem;
+        }
+        List<OrderItem> orderItemList = order.get().getOrderItem();
+        OrderItem orderItem = null;
+        for (OrderItem item : orderItemList) {
+            if (item.getBook() == book) {
+                item.setQuantity(item.getQuantity() + 1);
+                orderItem = item;
+                break;
+            }
+        }
+        double totalPrice =
+                orderItemList
+                        .stream()
+                        .mapToDouble(oItem -> oItem.getPrice() * oItem.getQuantity()).sum();
+        order.get().setTotalPrice(totalPrice);
+
+        orderRepository.save(order.get());
+        orderItemRepository.save(orderItem);
+        return orderItem;
     }
 
-    public OrderItem updateOrderItem(Integer orderId, Integer bookId, OrderItem orderItem) throws OrderItemNotFoundException {
+    public OrderItem updateOrderItem(Integer orderId, Integer bookId, OrderItem orderItem)
+            throws OrderItemNotFoundException {
+
         OrderItem _orderItem = this.getOrderItemById(orderId,bookId);
 
         _orderItem.setBook(orderItem.getBook());
