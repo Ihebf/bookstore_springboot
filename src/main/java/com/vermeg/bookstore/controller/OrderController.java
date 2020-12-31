@@ -4,6 +4,7 @@ import com.vermeg.bookstore.entities.Order;
 import com.vermeg.bookstore.entities.OrderItem;
 import com.vermeg.bookstore.exception.OrderListEmptyException;
 import com.vermeg.bookstore.exception.OrderNotFoundException;
+import com.vermeg.bookstore.exception.UserNotFoundException;
 import com.vermeg.bookstore.service.OrderService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,11 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Set;
 
 @RestController
 @RequestMapping("/order")
 @AllArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 public class OrderController {
 
     private final OrderService orderService;
@@ -42,15 +43,22 @@ public class OrderController {
         }
     }
 
-    @GetMapping("{orderId}/orderItems")
-    public ResponseEntity<Set<OrderItem>> getOrderItems(@PathVariable Integer orderId){
+    @GetMapping("/items/{username}")
+    public ResponseEntity<List<OrderItem>> getOrderItems(@PathVariable String username){
         try{
             return ResponseEntity
                     .status(HttpStatus.OK)
-                    .body(orderService.getOrderItems(orderId));
-        } catch (OrderNotFoundException e){
-            return new ResponseEntity("There is no order with this id "+orderId, HttpStatus.NO_CONTENT);
+                    .body(orderService.getOrderItems(username));
+        } catch (UserNotFoundException | OrderNotFoundException e){
+            return new ResponseEntity("There is no order for "+username, HttpStatus.NO_CONTENT);
         }
+    }
+
+    @GetMapping("/totalPrice/{username}")
+    public ResponseEntity<Double> getTotalPrice(@PathVariable String username){
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(orderService.getTotalPrice(username));
     }
 
     @PostMapping("/add")

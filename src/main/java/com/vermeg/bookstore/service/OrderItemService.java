@@ -7,6 +7,7 @@ import com.vermeg.bookstore.repository.OrderItemRepository;
 import com.vermeg.bookstore.repository.OrderRepository;
 import com.vermeg.bookstore.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,72 +32,110 @@ public class OrderItemService {
     }
 
 
-    public OrderItem getOrderItemById(Integer orderItemId, Integer bookId) throws OrderItemNotFoundException {
-        OrderItemKey id = new OrderItemKey(orderItemId,bookId);
-        OrderItem orderItem = orderItemRepository.findById(id).orElseThrow(()->
-                new OrderItemNotFoundException(orderItemId.toString()));
-        return orderItem;
+    public OrderItem getOrderItemById(Integer orderItemId, Integer bookId,String username) throws OrderNotFoundException, BookNotFoundException, OrderItemNotFoundException {
+        Order order = orderRepository.findById(orderItemId).orElseThrow(()-> new OrderNotFoundException("order not found"));
+        Book book = bookRepository.findById(bookId).orElseThrow(()-> new BookNotFoundException("book not found"));
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException(username + " Not found"));
+
+        if(order.getUser() == user) {
+            OrderItem orderItem = orderItemRepository.findByOrderAndBook(order, book)
+                    .orElseThrow(() ->
+                            new OrderItemNotFoundException(orderItemId.toString()));
+            return orderItem;
+        }
+        return null;
     }
 
     @Transactional
-    public OrderItem createOrderItem(Integer orderId,Integer bookId,Integer userId)
-            throws UserNotFoundException, BookNotFoundException {
-        User user = userRepository.findById(userId)
-                .orElseThrow(()-> new UserNotFoundException("User not found"));
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(()-> new BookNotFoundException("Book not found"));
-        Optional<Order> order = orderRepository.findById(orderId);
-        if(order.isPresent()){
-            Order newOrder = new Order();
-            OrderItem orderItem = new OrderItem(null,1,book.getPrice(),book,newOrder);
+    public OrderItem createOrderItem(Integer bookId,String username) throws UserNotFoundException, BookNotFoundException {
+        User user = userRepository.findByUsername(username).orElseThrow(()-> new UserNotFoundException("User not found"));
+        Book book = bookRepository.findById(bookId).orElseThrow(()-> new BookNotFoundException("Book not found"));
+
+        if(user.getOrder() == null){
+            Order order = new Order();
+            OrderItem orderItem = new OrderItem();
             List<OrderItem> orderItemList = new ArrayList<>();
+
+            orderItem.setBook(book);
+            orderItem.setPrice(book.getPrice());
+            orderItem.setQuantity(1);
+            orderItem.setOrder(order);
 
             orderItemList.add(orderItem);
 
-            newOrder.setUser(user);
-            newOrder.setOrderItem(orderItemList);
-            newOrder.setTotalPrice(orderItem.getPrice());
+            order.setUser(user);
+            order.setTotalPrice(book.getPrice());
+            order.setState(false);
+            order.setOrderItem(orderItemList);
 
-            orderRepository.save(newOrder);
+            user.setOrder(order);
+
             orderItemRepository.save(orderItem);
+            userRepository.save(user);
+            orderRepository.save(order);
+
+
             return orderItem;
         }
-        List<OrderItem> orderItemList = order.get().getOrderItem();
-        OrderItem orderItem = null;
-        for (OrderItem item : orderItemList) {
-            if (item.getBook() == book) {
-                item.setQuantity(item.getQuantity() + 1);
-                orderItem = item;
-                break;
+        Order order = user.getOrder();
+        List<OrderItem> orderItemList = order.getOrderItem();
+        for (int i=0;i<orderItemList.size();i++){
+            OrderItem item = orderItemList.get(i);
+            if (item.getBook() == book){
+                item.setQuantity(item.getQuantity()+1);
+                orderItemRepository.save(item);
+                calculateTotalPrice(order);
+                return item;
             }
         }
-        double totalPrice =
-                orderItemList
-                        .stream()
-                        .mapToDouble(oItem -> oItem.getPrice() * oItem.getQuantity()).sum();
-        order.get().setTotalPrice(totalPrice);
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrder(order);
+        orderItem.setQuantity(1);
+        orderItem.setPrice(book.getPrice());
+        orderItem.setBook(book);
 
-        orderRepository.save(order.get());
+        orderItemList.add(orderItem);
         orderItemRepository.save(orderItem);
+        calculateTotalPrice(order);
         return orderItem;
+
     }
 
-    public OrderItem updateOrderItem(Integer orderId, Integer bookId, OrderItem orderItem)
-            throws OrderItemNotFoundException {
+    @Transactional
+    public void calculateTotalPrice(Order order) {
+        int totalPrice = 0;
+        for (int i=0;i<order.getOrderItem().size();i++){
+            totalPrice+= order.getOrderItem().get(i).getPrice() * order.getOrderItem().get(i).getQuantity();
+        }
+        order.setTotalPrice(totalPrice);
 
-        OrderItem _orderItem = this.getOrderItemById(orderId,bookId);
-
-        _orderItem.setBook(orderItem.getBook());
-        _orderItem.setOrder(orderItem.getOrder());
-        _orderItem.setPrice(orderItem.getPrice());
-        _orderItem.setQuantity(orderItem.getQuantity());
-
-        return orderItemRepository.save(_orderItem);
+        orderRepository.save(order);
     }
 
-    public OrderItem deleteOrderItem(Integer orderId, Integer bookId) throws OrderItemNotFoundException {
-        OrderItem orderItem = this.getOrderItemById(orderId,bookId);
+    public OrderItem updateOrderItem(Integer orderId, Integer bookId, OrderItem orderItem) throws OrderItemNotFoundException, OrderNotFoundException, BookNotFoundException {
+        Order order = orderRepository.findById(orderId).orElseThrow(()-> new OrderNotFoundException("order not found"));
+        Book book = bookRepository.findById(bookId).orElseThrow(()-> new BookNotFoundException("book not found"));
+        OrderItem orderI = orderItemRepository.findByOrderAndBook(order,book).orElseThrow(()-> new OrderItemNotFoundException("item not found"));
 
+        orderI.setQuantity(orderItem.getQuantity());
+        orderI.setOrder(orderItem.getOrder());
+        orderI.setPrice(orderItem.getPrice());
+        orderI.setBook(orderItem.getBook());
+
+        return orderItemRepository.save(orderI);
+    }
+
+    public OrderItem deleteOrderItem(Integer orderItemId) throws OrderItemNotFoundException {
+        OrderItem orderItem = orderItemRepository.findById(orderItemId).orElseThrow(()-> new OrderItemNotFoundException("item not found"));
+        Order order = orderItem.getOrder();
+        List<OrderItem> orderItemList = order.getOrderItem();
+        for(int i=0;i<orderItemList.size();i++){
+            OrderItem item = orderItemList.get(i);
+            if(item == orderItem){
+                orderItemList.remove(i);
+                calculateTotalPrice(order);
+            }
+        }
         orderItemRepository.delete(orderItem);
         return orderItem;
     }

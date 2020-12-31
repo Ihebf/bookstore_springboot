@@ -14,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/book")
 @AllArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 public class BookController {
 
     private final BookService bookService;
@@ -71,10 +72,9 @@ public class BookController {
     @DeleteMapping("/delete/{bookId}")
     public ResponseEntity<Book> deleteBook(@PathVariable Integer bookId){
         try {
-            Book book = bookService.deleteBook(bookId);
-            return new ResponseEntity(
-                    "Book deleted "+ book,
-                    HttpStatus.OK);
+            return ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(bookService.deleteBook(bookId));
         }catch (BookNotFoundException e){
             return new ResponseEntity(
                     "Book not found",

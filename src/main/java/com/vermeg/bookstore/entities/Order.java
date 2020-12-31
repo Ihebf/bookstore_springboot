@@ -6,6 +6,7 @@ import javax.persistence.*;
 import java.util.List;
 
 @Entity
+@Table(name = "order_table")
 @Data @AllArgsConstructor @NoArgsConstructor
 public class Order {
 

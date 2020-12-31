@@ -1,10 +1,7 @@
 package com.vermeg.bookstore.controller;
 
 import com.vermeg.bookstore.entities.OrderItem;
-import com.vermeg.bookstore.exception.BookNotFoundException;
-import com.vermeg.bookstore.exception.OrderItemListEmptyException;
-import com.vermeg.bookstore.exception.OrderItemNotFoundException;
-import com.vermeg.bookstore.exception.UserNotFoundException;
+import com.vermeg.bookstore.exception.*;
 import com.vermeg.bookstore.service.OrderItemService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/orderItems")
 @AllArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 public class OrderItemController {
 
     private final OrderItemService orderItemService;
@@ -31,34 +29,33 @@ public class OrderItemController {
         }
     }
 
-    @GetMapping("/{orderId}/{bookId}")
-    public ResponseEntity<OrderItem> getOrderItemById(@PathVariable Integer orderId, @PathVariable Integer bookId){
+    @GetMapping("/{orderId}/{bookId}/{username}")
+    public ResponseEntity<OrderItem> getOrderItemById(@PathVariable Integer orderId, @PathVariable Integer bookId,@PathVariable String username){
         try{
             return ResponseEntity
                     .status(HttpStatus.OK)
-                    .body(orderItemService.getOrderItemById(orderId,bookId));
-        } catch (OrderItemNotFoundException e){
-            return new ResponseEntity("There is no orderItem with this id "+orderId, HttpStatus.NO_CONTENT);
+                    .body(orderItemService.getOrderItemById(orderId,bookId,username));
+        } catch (OrderItemNotFoundException | OrderNotFoundException | BookNotFoundException e){
+            return new ResponseEntity("There is no item with this id "+orderId, HttpStatus.NO_CONTENT);
         }
     }
 
-    @PostMapping("/add/order/{orderId}/book/{bookId}/user/{userId}")
-    public ResponseEntity<OrderItem> createOrderItem(@PathVariable Integer orderId,
-                                                     @PathVariable Integer bookId,
-                                                     @PathVariable Integer userId){
+    @PostMapping("/add/book/{bookId}/user/{username}")
+    public ResponseEntity<OrderItem> createOrderItem(@PathVariable Integer bookId,
+                                                     @PathVariable String username){
         try {
             return ResponseEntity
                     .status(HttpStatus.CREATED)
-                    .body(orderItemService.createOrderItem(orderId,bookId,userId));
+                    .body(orderItemService.createOrderItem(bookId,username));
         } catch (UserNotFoundException e) {
-            return new ResponseEntity("User not found with the id: "+userId,HttpStatus.NO_CONTENT);
+            return new ResponseEntity("User not found with the name: "+username,HttpStatus.NO_CONTENT);
         } catch (BookNotFoundException e) {
             return new ResponseEntity("Book not found with the id: "+bookId,HttpStatus.NO_CONTENT);
         }
     }
 
     @PutMapping("/update/order/{orderId}/book/{bookId}/user/{userId}")
-    public ResponseEntity<OrderItem> updateOrderItem(
+    public ResponseEntity updateOrderItem(
             @PathVariable Integer orderId,
             @PathVariable Integer bookId,
             @RequestBody OrderItem orderItem){
@@ -67,23 +64,30 @@ public class OrderItemController {
                     .status(HttpStatus.OK)
                     .body(orderItemService.updateOrderItem(orderId,bookId,orderItem));
         } catch (OrderItemNotFoundException e) {
-            return new ResponseEntity(
-                    "OrderItem not found",
+            return new ResponseEntity<>(
+                    "Item not found",
+                    HttpStatus.NOT_FOUND);
+        } catch (OrderNotFoundException e) {
+            return new ResponseEntity<>(
+                    "Order not found",
+                    HttpStatus.NOT_FOUND);
+        } catch (BookNotFoundException e) {
+            return new ResponseEntity<>(
+                    "Book not found",
                     HttpStatus.NOT_FOUND);
         }
     }
 
-    @DeleteMapping("/delete/{orderId}/{bookId}")
-    public ResponseEntity<OrderItem> deleteOrderItem(
-            @PathVariable Integer orderId,
-            @PathVariable Integer bookId){
+    @DeleteMapping("/delete/{orderItemId}")
+    public ResponseEntity deleteOrderItem(
+            @PathVariable Integer orderItemId){
         try {
             return ResponseEntity
                     .status(HttpStatus.OK)
-                    .body(orderItemService.deleteOrderItem(orderId,bookId));
+                    .body(orderItemService.deleteOrderItem(orderItemId));
         } catch (OrderItemNotFoundException e) {
-            return new ResponseEntity(
-                    "OrderItem not found",
+            return new ResponseEntity<>(
+                    "Item not found",
                     HttpStatus.NOT_FOUND);
         }
     }

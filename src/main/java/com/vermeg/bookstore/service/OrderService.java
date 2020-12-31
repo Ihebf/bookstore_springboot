@@ -2,20 +2,24 @@ package com.vermeg.bookstore.service;
 
 import com.vermeg.bookstore.entities.Order;
 import com.vermeg.bookstore.entities.OrderItem;
+import com.vermeg.bookstore.entities.User;
 import com.vermeg.bookstore.exception.OrderListEmptyException;
 import com.vermeg.bookstore.exception.OrderNotFoundException;
+import com.vermeg.bookstore.exception.UserNotFoundException;
 import com.vermeg.bookstore.repository.OrderRepository;
+import com.vermeg.bookstore.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Set;
 
 @Service
 @AllArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final UserRepository userRepository;
 
     public List<Order> getAllOrder() throws OrderListEmptyException {
         List<Order> orders = orderRepository.findAll();
@@ -37,7 +41,7 @@ public class OrderService {
     public Order updateOrder(Integer orderId, Order order) throws OrderNotFoundException {
         Order _order = this.getOrderById(orderId);
 
-        _order.setOrderItemSet(order.getOrderItemSet());
+       // _order.setOrderItem(order.getOrderItem());
         _order.setState(order.isState());
         _order.setUser(order.getUser());
 
@@ -51,9 +55,18 @@ public class OrderService {
     }
 
 
-    public Set<OrderItem> getOrderItems(Integer orderId) throws OrderNotFoundException{
-        Order order = this.getOrderById(orderId);
+    public List<OrderItem> getOrderItems(String username) throws UserNotFoundException, OrderNotFoundException {
+        User user = userRepository.findByUsername(username).orElseThrow(()-> new UserNotFoundException("user not found"));
+        if(user.getOrder() == null)
+            throw new OrderNotFoundException("There is no order");
+        return user.getOrder().getOrderItem();
+    }
 
-        return order.getOrderItemSet();
+    public Double getTotalPrice(String username) {
+        User user = userRepository.findByUsername(username).orElseThrow(()-> new UsernameNotFoundException("user not found"));
+
+        if (user.getOrder() == null)
+            return 0D;
+        return user.getOrder().getTotalPrice();
     }
 }
